@@ -113,10 +113,16 @@ jobs:
         shell: pwsh
         run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step set_build_channel
 
+      # NB: run these two directly (not via `cargo run --step ...`). build.mjs internally
+      # shells out to `cargo run ... set_build_channel`, which would relink the running
+      # fluxer-ci.exe and fail with a Windows file lock if this step itself were fluxer-ci.exe.
       - name: Build Electron main process (native + main)
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
         shell: pwsh
-        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step build_electron_main
+        env:
+          NODE_ENV: production
+          FLUXER_DESKTOP_PRODUCTION: "true"
+        run: pnpm build
 
       - name: Build Electron app (electron-builder -> NSIS + portable)
         working-directory: ${{ env.WORKDIR }}/fluxer_desktop
@@ -125,7 +131,7 @@ jobs:
           TEMP: C:\t
           TMP: C:\t
           ELECTRON_BUILDER_CACHE: C:\ebcache
-        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step build_app_windows
+        run: pnpm exec electron-builder --config electron-builder.config.cjs --win --x64
 
       - name: List build outputs
         shell: pwsh
