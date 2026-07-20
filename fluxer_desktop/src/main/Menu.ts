@@ -11,7 +11,7 @@ const MACOS_HELP_MENU_TITLE_AUTODETECT_OPT_OUT = '\u200C';
 
 function buildTemplate(): Array<MenuItemConstructorOptions> {
 	const isCanary = BUILD_CHANNEL === 'canary';
-	const appName = isCanary ? 'Fluxer Canary' : 'Fluxer';
+	const appName = isCanary ? 'Speechord Canary' : 'Speechord';
 	const isMac = process.platform === 'darwin';
 	const template: Array<MenuItemConstructorOptions> = [];
 	if (isMac) {
@@ -191,7 +191,7 @@ function buildTemplate(): Array<MenuItemConstructorOptions> {
 			{
 				label: t('desktop.appMenu.website'),
 				click: async () => {
-					await openExternalDeduped('https://fluxer.app');
+					await openExternalDeduped('https://speechord.com');
 				},
 			},
 			{

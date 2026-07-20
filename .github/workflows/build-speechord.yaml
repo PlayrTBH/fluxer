@@ -1,0 +1,160 @@
+name: build speechord
+
+# Slim Windows-x64 build for the self-hosted "Speechord" desktop app.
+# Reuses the upstream Fluxer build steps (native Rust voice modules + electron-builder)
+# but skips the S3 / Azure-signing / Velopack-publish machinery, emitting an NSIS
+# installer + portable exe as GitHub Release assets / workflow artifacts instead.
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish a GitHub Release with the installer (otherwise only upload build artifacts)
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+concurrency:
+  group: speechord-desktop
+  cancel-in-progress: true
+
+env:
+  BUILD_CHANNEL: stable
+  CHANNEL: stable
+  RELEASE_CHANNEL: stable
+  DESKTOP_PLATFORM: windows
+  DESKTOP_ARCH: x64
+  DESKTOP_VARIANT: default
+  FLUXER_DESKTOP_BUILD_VARIANT: default
+  FLUXER_WINDOWS_GAME_CAPTURE_MODULE_ENABLED: "false"
+  PLATFORM: windows
+  ARCH: x64
+  ELECTRON_ARCH: x64
+  CI_MANIFEST: ${{ github.workspace }}/tools/ci/Cargo.toml
+
+jobs:
+  build:
+    name: Build Speechord (windows x64)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0
+
+      - name: Compute CalVer version
+        id: ver
+        shell: pwsh
+        run: |
+          $now = (Get-Date).ToUniversalTime()
+          $minor = "$($now.Month)$($now.Day.ToString('D2'))"
+          $micro = [int]$now.ToString('HHmmss')
+          $v = "$($now.Year).$minor.$micro"
+          "VERSION=$v" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Speechord version: $v"
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9
+        with:
+          toolchain: "1.93.0"
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: "3.13"
+
+      - name: Ensure python3 command
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step ensure_python3_windows
+
+      - name: Shorten Windows paths (subst W:) and pin pnpm store
+        shell: pwsh
+        env:
+          SUBST_TARGET: ${{ github.workspace }}
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step windows_paths
+
+      - name: Set up Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e
+        with:
+          node-version: 24
+
+      - name: Set up pnpm via corepack
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step setup_pnpm_corepack
+
+      - name: Resolve pnpm store path
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step resolve_pnpm_store_windows
+
+      - name: Set up MSVC env
+        uses: TheMrMilchmann/setup-msvc-dev@79dac248aac9d0059f86eae9d8b5bfab4e95e97c
+        with:
+          arch: amd64
+
+      - name: Install Rust Windows targets
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step install_rust_windows_targets
+
+      - name: Install dependencies
+        working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step install_dependencies
+
+      - name: Update version
+        working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step update_version
+
+      - name: Set build channel
+        working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step set_build_channel
+
+      - name: Build Electron main process (native + main)
+        working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        shell: pwsh
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step build_electron_main
+
+      - name: Build Electron app (electron-builder -> NSIS + portable)
+        working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        shell: pwsh
+        env:
+          TEMP: C:\t
+          TMP: C:\t
+          ELECTRON_BUILDER_CACHE: C:\ebcache
+        run: cargo run --locked --quiet --manifest-path "$env:CI_MANIFEST" -- build-desktop --step build_app_windows
+
+      - name: List build outputs
+        shell: pwsh
+        run: |
+          $out = "${{ github.workspace }}/fluxer_desktop/dist-electron"
+          Get-ChildItem $out -File -ErrorAction SilentlyContinue | Select-Object Name, @{n='MB';e={[math]::Round($_.Length/1MB,1)}} | Format-Table -AutoSize
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: speechord-windows-x64
+          if-no-files-found: error
+          path: |
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/*.exe
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/latest.yml
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/*.blockmap
+
+      - name: Publish GitHub Release
+        if: ${{ inputs.publish_release }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: desktop-v${{ steps.ver.outputs.version }}
+          name: Speechord ${{ steps.ver.outputs.version }}
+          body: |
+            Speechord desktop (Windows x64) — a self-hosted build of Fluxer pointed at https://speechord.com.
+
+            Based on Fluxer (AGPL-3.0-or-later): https://github.com/fluxerapp/fluxer
+            Source for this build: https://github.com/PlayrTBH/fluxer/tree/speechord
+          files: |
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/*.exe
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/latest.yml
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/*.blockmap

@@ -7,8 +7,8 @@ const os = require('node:os');
 const path = require('node:path');
 const {promisify} = require('node:util');
 const execFileAsync = promisify(execFile);
-const productName = isCanary ? 'Fluxer Canary' : 'Fluxer';
-const appId = isCanary ? 'app.fluxer.canary' : 'app.fluxer';
+const productName = isCanary ? 'Speechord Canary' : 'Speechord';
+const appId = isCanary ? 'app.speechord.canary' : 'app.speechord';
 const iconDir = isCanary ? 'icons-canary' : 'icons-stable';
 const packageName = isCanary ? 'fluxer_desktop_canary' : 'fluxer_desktop';
 const linuxPackageName = isCanary ? 'fluxer-canary' : 'fluxer';
@@ -45,7 +45,11 @@ if (electronArch && !supportedTargetArchs.includes(electronArch)) {
 const targetArchs = electronArch ? [electronArch] : supportedTargetArchs;
 const winTargets = [
 	{
-		target: 'dir',
+		target: 'nsis',
+		arch: targetArchs,
+	},
+	{
+		target: 'portable',
 		arch: targetArchs,
 	},
 ];
@@ -1051,7 +1055,7 @@ async function verifyLinuxArtifactContracts(buildResult) {
 module.exports = {
 	appId,
 	productName,
-	copyright: 'Copyright © 2026 Fluxer Platform AB',
+	copyright: 'Copyright © 2026 Speechord — based on Fluxer (AGPL-3.0-or-later)',
 	// biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder placeholders, not JS template literals.
 	artifactName: '${productName}-${version}-${os}-${arch}.${ext}',
 	directories: {
@@ -1173,7 +1177,7 @@ module.exports = {
 		{
 			name: appId,
 			role: 'Viewer',
-			schemes: ['fluxer'],
+			schemes: ['speechord'],
 		},
 	],
 	beforePack: verifyNativePackageInputs,
@@ -1230,6 +1234,14 @@ module.exports = {
 	win: {
 		icon: `build_resources/${iconDir}/icon.ico`,
 		target: winTargets,
+	},
+	nsis: {
+		oneClick: true,
+		perMachine: false,
+		allowElevation: false,
+		deleteAppDataOnUninstall: false,
+		createDesktopShortcut: true,
+		createStartMenuShortcut: true,
 	},
 	portable: {
 		// biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder expands these placeholders.
