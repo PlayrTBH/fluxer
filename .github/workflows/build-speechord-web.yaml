@@ -1,0 +1,51 @@
+name: build speechord web
+
+# Builds a custom fluxer-app-proxy-self-hosted image from this fork so the gold accent
+# (fluxer_app/scripts/GenerateColorSystem.ts) and the speechord.com desktop download link
+# (fluxer_app/src/features/app/config/I18nDisplayConstants.ts) get baked into the served SPA.
+# fluxer_app_proxy/Dockerfile is self-contained: stage 1 runs `cd fluxer_app && pnpm build`
+# (which runs generate:colors), stage 3 serves the built dist via the Rust proxy.
+#
+# Reuses the upstream Dockerfile but builds on a standard GitHub runner (the upstream
+# reusable workflow targets Blacksmith self-hosted runners this fork lacks). amd64 only
+# (VM 223 is x86-64). Deploy = override the app-proxy service image on the instance.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    name: Build app-proxy (SPA + Rust proxy) -> ghcr
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build + push (gold accent + speechord download link baked in)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: fluxer_app_proxy/Dockerfile
+          push: true
+          platforms: linux/amd64
+          provenance: false
+          tags: |
+            ghcr.io/playrtbh/fluxer-app-proxy-self-hosted:speechord
+            ghcr.io/playrtbh/fluxer-app-proxy-self-hosted:v1
+          build-args: |
+            FLUXER_APP_PROXY_TIME_FREEZE_ENABLED=false
+            BUILD_VERSION=speechord
+          cache-from: type=gha,scope=speechord-app-proxy
+          cache-to: type=gha,scope=speechord-app-proxy,mode=max
