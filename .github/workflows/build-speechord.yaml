@@ -27,9 +27,13 @@ env:
   RELEASE_CHANNEL: stable
   DESKTOP_PLATFORM: windows
   DESKTOP_ARCH: x64
-  DESKTOP_VARIANT: default
-  FLUXER_DESKTOP_BUILD_VARIANT: default
-  FLUXER_WINDOWS_GAME_CAPTURE_MODULE_ENABLED: "false"
+  # windows-game-capture variant: bundles @fluxer/win-game-capture, which is the ONLY
+  # native screen-capture backend on Windows. Without it, screen share fails with
+  # "native screen capture unavailable (disabled-by-launch)". DXGI screen/window capture
+  # works unsigned; only game-window injection needs signing (that stays disabled, fine).
+  DESKTOP_VARIANT: windows-game-capture
+  FLUXER_DESKTOP_BUILD_VARIANT: windows-game-capture
+  FLUXER_WINDOWS_GAME_CAPTURE_MODULE_ENABLED: "true"
   PLATFORM: windows
   ARCH: x64
   ELECTRON_ARCH: x64
