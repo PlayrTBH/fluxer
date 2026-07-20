@@ -36,12 +36,16 @@ const MACOS_PRE_SEQUOIA_SCREEN_CAPTURE_DISABLED_FEATURES = [
 	'WarmScreenCaptureSonoma',
 	'UseSCContentSharingPicker',
 ];
-const WINDOWS_WEBRTC_WGC_DISABLED_FEATURES = [
+// Speechord: ENABLE Windows Graphics Capture (WGC) — the modern capturer the
+// browser uses and that works on Windows 11. Upstream disables these to force the
+// legacy GDI/DXGI capturer, which fails ("blocked capture") on some Win11 GPUs.
+// Keep only WebRtcWgcRequireBorder disabled so WGC captures without a yellow border.
+const WINDOWS_WEBRTC_WGC_DISABLED_FEATURES = ['WebRtcWgcRequireBorder'];
+const WINDOWS_WEBRTC_WGC_ENABLED_FEATURES = [
 	'AllowWgcScreenCapturer',
 	'AllowWgcWindowCapturer',
 	'AllowWgcScreenZeroHz',
 	'AllowWgcWindowZeroHz',
-	'WebRtcWgcRequireBorder',
 ];
 const WINDOWS_NVIDIA_HEVC_DECODE_WORKAROUND_DEVICE_IDS = new Set([
 	4928, 4929, 4932, 4934, 4935, 4936, 4937, 4939, 4941, 4942, 4943, 4986, 4987, 4992, 4993, 4994, 5008, 5009, 5010,
@@ -315,6 +319,13 @@ export function addMacosPreSequoiaScreenCaptureDisabledFeatures(features: Set<st
 export function addWindowsWebRtcWgcDisabledFeatures(features: Set<string>): void {
 	if (process.platform !== 'win32') return;
 	for (const feature of WINDOWS_WEBRTC_WGC_DISABLED_FEATURES) {
+		features.add(feature);
+	}
+}
+
+export function addWindowsWebRtcWgcEnabledFeatures(features: Set<string>): void {
+	if (process.platform !== 'win32') return;
+	for (const feature of WINDOWS_WEBRTC_WGC_ENABLED_FEATURES) {
 		features.add(feature);
 	}
 }

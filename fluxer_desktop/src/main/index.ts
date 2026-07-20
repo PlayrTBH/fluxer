@@ -23,6 +23,7 @@ import {
 	addMacosPreSequoiaScreenCaptureDisabledFeatures,
 	addWindowsHardwareVideoEncodeFeatures,
 	addWindowsWebRtcWgcDisabledFeatures,
+	addWindowsWebRtcWgcEnabledFeatures,
 	appendConfiguredChromiumSwitches,
 	appendDisabledChromiumFeatures,
 	appendEnabledBlinkFeature,
@@ -267,6 +268,7 @@ if (launchConfigurationError) {
 		addMacosPreSequoiaScreenCaptureDisabledFeatures(disabledChromiumFeatures);
 	}
 	addWindowsWebRtcWgcDisabledFeatures(disabledChromiumFeatures);
+	addWindowsWebRtcWgcEnabledFeatures(enabledChromiumFeatures);
 	appendDisabledChromiumFeatures(disabledChromiumFeatures);
 	if (enabledChromiumFeatures.size > 0) {
 		appendEnabledChromiumFeatures(enabledChromiumFeatures);
