@@ -176,8 +176,10 @@ jobs:
           $dir = "dist-electron/velopack-windows-x64"
           # Rename the generated Setup to a clear, versioned name (Setup is standalone;
           # releases.win.json / RELEASES reference the nupkg, not the Setup, so this is safe).
+          # Stable, unversioned name so speechord.com/download -> releases/latest/download/Speechord-Setup.exe
+          # is always a direct one-click download of the newest build (version lives in the release tag).
           $setup = Get-ChildItem $dir -Filter "*-Setup.exe" | Select-Object -First 1
-          if ($setup) { Rename-Item $setup.FullName "Speechord-Setup-$env:VERSION-win-x64.exe" }
+          if ($setup) { Rename-Item $setup.FullName "Speechord-Setup.exe" }
           if (-not (Test-Path "$dir/releases.win.json")) { throw "releases.win.json missing" }
           if (-not (Get-ChildItem $dir -Filter "*-full.nupkg")) { throw "full nupkg missing" }
           Get-ChildItem $dir | Select-Object Name, @{n='MB';e={[math]::Round($_.Length/1MB,2)}} | Format-Table -AutoSize
@@ -206,8 +208,8 @@ jobs:
           body: |
             Speechord desktop (Windows x64) — a self-hosted build of Fluxer pointed at https://speechord.com.
 
-            **Install:** download **Speechord-Setup-${{ steps.ver.outputs.version }}-win-x64.exe** and run it. This is a
-            Velopack installer, so the app auto-updates itself from future releases (no reinstall needed after this one).
+            **Install:** get it from **https://speechord.com/download** (or the **Speechord-Setup.exe** asset below) and run it.
+            This is a Velopack installer, so the app auto-updates itself from future releases (no reinstall needed after this one).
             The `-portable-` exe is a no-install alternative that does not auto-update.
 
             The `releases.win.json` + `.nupkg` assets are the auto-update feed (served via
@@ -216,7 +218,7 @@ jobs:
             Based on Fluxer (AGPL-3.0-or-later): https://github.com/fluxerapp/fluxer
             Source for this build: https://github.com/PlayrTBH/fluxer/tree/speechord
           files: |
-            ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/Speechord-Setup-*.exe
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/Speechord-Setup.exe
             ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/*.nupkg
             ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/releases.win.json
             ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/RELEASES
