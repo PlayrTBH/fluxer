@@ -3,6 +3,7 @@
 import RuntimeConfig from '@app/features/app/state/RuntimeConfig';
 import {LimitResolver} from '@app/features/app/utils/LimitResolverAdapter';
 import DeveloperOptions from '@app/features/devtools/state/DeveloperOptions';
+import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
 import type {LimitKey} from '@fluxer/constants/src/LimitConfigMetadata';
 import {
 	type MentionReplyPreference,
@@ -187,7 +188,10 @@ export class User {
 	constructor(user: WireUser, options?: UserRecordOptions) {
 		this.instanceId = options?.instanceId ?? RuntimeConfig.localInstanceDomain;
 		this.id = user.id;
-		this.username = user.username;
+		// The system/notification account (id 0) is synthesized server-side with a hardcoded
+		// upstream username. Present it under this instance's brand so system DMs read as the
+		// instance, not the upstream product. Follows RuntimeConfig branding automatically.
+		this.username = user.id === FLUXERBOT_ID ? RuntimeConfig.productName : user.username;
 		this.discriminator = user.discriminator;
 		this.globalName = user.global_name ?? null;
 		this.avatar = user.avatar;

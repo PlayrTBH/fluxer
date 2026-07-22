@@ -11,6 +11,7 @@ import {
 	normalizeEndpoint,
 	parseAvatarHash,
 } from '@app/features/user/utils/AvatarMediaUtils';
+import {FLUXERBOT_ID} from '@fluxer/constants/src/AppConstants';
 import {
 	MEDIA_PROXY_AVATAR_SIZE_DEFAULT,
 	MEDIA_PROXY_ICON_SIZE_DEFAULT,
@@ -18,6 +19,12 @@ import {
 import type {MediaProxyImageSize} from '@fluxer/constants/src/MediaProxyImageSizes';
 
 const getDefaultAvatar = (index: number): string => cdnUrl(`avatars/${index}.png`);
+
+// The system/notification account (id 0) is synthesized upstream with no stored avatar. Render
+// this instance's brand icon for it (instead of a generic default) so system DMs carry the
+// instance's identity. Returns null when it isn't the system user or no brand icon is configured.
+const getSystemBrandAvatarURL = (id: string): string | null =>
+	id === FLUXERBOT_ID ? RuntimeConfig.iconUrl : null;
 
 export function getDefaultAvatarPrimaryColor(id: string) {
 	return getSharedDefaultAvatarPrimaryColor(id);
@@ -96,7 +103,7 @@ export function getUserAvatarURL(
 	size: MediaProxyImageSize = MEDIA_PROXY_AVATAR_SIZE_DEFAULT,
 ) {
 	if (!avatar) {
-		return getDefaultAvatar(getDefaultAvatarIndex(id));
+		return getSystemBrandAvatarURL(id) ?? getDefaultAvatar(getDefaultAvatarIndex(id));
 	}
 	const {hash, animated: shouldAnimate} = parseMediaHashForRequest(avatar, animated);
 	return buildWebpMediaUrl({
@@ -113,7 +120,7 @@ export function getUserNotificationAvatarURL(
 	size: MediaProxyImageSize = MEDIA_PROXY_AVATAR_SIZE_DEFAULT,
 ) {
 	if (!avatar) {
-		return getDefaultAvatar(getDefaultAvatarIndex(id));
+		return getSystemBrandAvatarURL(id) ?? getDefaultAvatar(getDefaultAvatarIndex(id));
 	}
 	const {hash, animated} = parseMediaHashForRequest(avatar, false);
 	return buildPngMediaUrl({
