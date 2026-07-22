@@ -182,6 +182,7 @@ export class User {
 	private readonly _termsAgreedAt: Date | null | undefined;
 	private readonly _privacyAgreedAt: Date | null | undefined;
 	private readonly _traits: ReadonlyArray<string>;
+	private readonly _acls: ReadonlyArray<string>;
 
 	constructor(user: WireUser, options?: UserRecordOptions) {
 		this.instanceId = options?.instanceId ?? RuntimeConfig.localInstanceDomain;
@@ -270,6 +271,7 @@ export class User {
 		this._termsAgreedAt = hasKey(user, 'terms_agreed_at') ? parseDateOrNull(user.terms_agreed_at) : undefined;
 		this._privacyAgreedAt = hasKey(user, 'privacy_agreed_at') ? parseDateOrNull(user.privacy_agreed_at) : undefined;
 		this._traits = mergeTraitsArray(EMPTY_STRING_ARRAY, user, {clearMissing: true});
+		this._acls = mergeAuthoritativeArray(EMPTY_STRING_ARRAY, user, 'acls', parseStringItem, {clearMissing: true}, EMPTY_STRING_ARRAY);
 	}
 
 	get email(): string | null | undefined {
@@ -374,6 +376,10 @@ export class User {
 
 	get traits(): ReadonlyArray<string> {
 		return this._traits;
+	}
+
+	get acls(): ReadonlyArray<string> {
+		return this._acls;
 	}
 
 	get displayName(): string {
@@ -525,6 +531,7 @@ export class User {
 		const privacyAgreedAt = pickDateField(this._privacyAgreedAt, u, 'privacy_agreed_at', opts);
 		if (privacyAgreedAt !== undefined) result.privacy_agreed_at = dateToIsoOrNull(privacyAgreedAt);
 		result.traits = mergeTraitsArray(this._traits, u, opts);
+		result.acls = mergeAuthoritativeArray(this._acls, u, 'acls', parseStringItem, opts, EMPTY_STRING_ARRAY);
 		return result;
 	}
 
@@ -613,6 +620,23 @@ export class User {
 		return this._isStaff ?? (this.flags & PublicUserFlags.STAFF) !== 0;
 	}
 
+	/**
+	 * Whether this account carries any admin ACL grant. Mirrors the server's authorization
+	 * signal exactly: the `@me` payload includes the account's ACL set (`['*']` for the
+	 * instance owner, empty for normal users), and the server gates every `/admin/*` endpoint
+	 * on these same ACLs. Use this — not isStaff() — to reveal admin-only UI, so the client
+	 * gate matches what the server will actually permit. Non-admins carry no ACLs and are
+	 * blocked here (and independently 403'd server-side even if the UI were shown).
+	 */
+	hasAdminAccess(): boolean {
+		return this._acls.length > 0;
+	}
+
+	/** Whether this account holds a specific ACL (the `*` wildcard grants everything). */
+	hasAcl(acl: string): boolean {
+		return this._acls.includes('*') || this._acls.includes(acl);
+	}
+
 	isClaimed(): boolean {
 		return !!this.email;
 	}
@@ -669,7 +693,8 @@ export class User {
 			this._ageVerifiedAdult === other._ageVerifiedAdult &&
 			datesEqual(this._termsAgreedAt, other._termsAgreedAt) &&
 			datesEqual(this._privacyAgreedAt, other._privacyAgreedAt) &&
-			arraysShallowEqual(this._traits, other._traits)
+			arraysShallowEqual(this._traits, other._traits) &&
+			arraysShallowEqual(this._acls, other._acls)
 		);
 	}
 
@@ -749,6 +774,7 @@ export class User {
 			this._privacyAgreedAt === undefined ? undefined : dateToIsoOrNull(this._privacyAgreedAt),
 		);
 		privateFields.traits = [...this._traits];
+		privateFields.acls = [...this._acls];
 		return {
 			...baseFields,
 			...(privateFields as Partial<UserPrivate>),

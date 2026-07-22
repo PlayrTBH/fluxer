@@ -45,7 +45,9 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 			getAccountSectionForNestedTab(initialTab) ?? getAccountSectionForLegacySection(initialSubtab);
 		const normalizedInitialTab = initialAccountSection ? ACCOUNT_SETTINGS_TAB : initialTab;
 		const normalizedInitialSubtab = initialAccountSection ?? initialSubtab;
-		const isStaff = Users.getCurrentUser()?.isStaff() ?? false;
+		const currentUser = Users.getCurrentUser();
+		const isStaff = currentUser?.isStaff() ?? false;
+		const hasAdminAccess = currentUser?.hasAdminAccess() ?? false;
 		const hasExpressionPackAccess = isStaff && DeveloperOptions.showExpressionPacksSettings;
 		const isDeveloperModeEnabled = UserSettings.developerMode;
 		const visibleSettingsTabs = useMemo(() => {
@@ -56,12 +58,12 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 				if (!isDeveloperModeEnabled && (tab.type === 'embed_debugger' || tab.type === 'component_gallery')) {
 					return false;
 				}
-				if (!isStaff && tab.type === 'admin') {
+				if (!hasAdminAccess && tab.type === 'admin') {
 					return false;
 				}
 				return true;
 			});
-		}, [hasExpressionPackAccess, isDeveloperModeEnabled, isStaff, settingsTabs]);
+		}, [hasExpressionPackAccess, isDeveloperModeEnabled, hasAdminAccess, settingsTabs]);
 		const resolveVisibleTab = useCallback(
 			(tabType?: UserSettingsTabType): UserSettingsTabType => {
 				if (tabType && visibleSettingsTabs.some((tab) => tab.type === tabType)) {

@@ -7,11 +7,13 @@ import {observer} from 'mobx-react-lite';
 import type React from 'react';
 import {useState} from 'react';
 
-// Phase 1 admin console: a thin, staff-gated UI over the instance's existing /admin/* API.
-// Every endpoint is enforced server-side by ACLs (a non-staff account that somehow reached
-// these calls is rejected with 403), so this UI only surfaces power the server already grants
-// the signed-in account. Follow-ups will replace the raw JSON console with per-feature panels
-// (user cards, server manager, message viewer) and inline right-click actions.
+// Phase 1 admin console: a thin, ACL-gated UI over the instance's existing /admin/* API.
+// The tab is only shown to accounts that actually carry admin ACLs (`hasAdminAccess()`, sourced
+// from the same ACL set the server authorizes against), and every endpoint is independently
+// enforced server-side by those ACLs (a non-admin account that somehow reached these calls is
+// rejected with 403). So this UI only surfaces power the server already grants the signed-in
+// account. Follow-ups will replace the raw JSON console with per-feature panels (user cards,
+// server manager, message viewer) and inline right-click actions.
 
 interface AdminEndpoint {
 	label: string;
@@ -43,7 +45,7 @@ const GOLD = 'hsl(44 72% 55%)';
 const CARD_BORDER = '1px solid rgba(255,255,255,.09)';
 
 const AdminTab: React.FC = observer(() => {
-	const isStaff = Users.getCurrentUser()?.isStaff() ?? false;
+	const hasAdminAccess = Users.getCurrentUser()?.hasAdminAccess() ?? false;
 	const [index, setIndex] = useState(0);
 	const [bodyText, setBodyText] = useState(ADMIN_ENDPOINTS[0]?.template ?? '{}');
 	const [result, setResult] = useState<string | null>(null);
@@ -51,10 +53,10 @@ const AdminTab: React.FC = observer(() => {
 	const [loading, setLoading] = useState(false);
 	const endpoint = ADMIN_ENDPOINTS[index];
 
-	if (!isStaff) {
+	if (!hasAdminAccess) {
 		return (
 			<div style={{padding: 24, color: 'var(--text-muted, #9a9aa7)'}}>
-				Admin tools are only available to staff accounts.
+				Admin tools are only available to administrator accounts.
 			</div>
 		);
 	}
@@ -98,8 +100,8 @@ const AdminTab: React.FC = observer(() => {
 		<div style={{padding: '4px 4px 32px', maxWidth: 760}}>
 			<h2 style={{fontSize: 20, fontWeight: 700, margin: '0 0 4px'}}>Admin</h2>
 			<p style={{color: 'var(--text-muted, #9a9aa7)', fontSize: 14, margin: '0 0 6px'}}>
-				Instance administration for staff accounts. Every action is authorized server-side by your account's
-				permissions.
+				Instance administration for administrator accounts. Every action is authorized server-side by your
+				account's permissions.
 			</p>
 			<div
 				style={{
