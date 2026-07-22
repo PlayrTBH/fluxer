@@ -56,9 +56,12 @@ export const UserSettingsModal: React.FC<UserSettingsModalProps> = observer(
 				if (!isDeveloperModeEnabled && (tab.type === 'embed_debugger' || tab.type === 'component_gallery')) {
 					return false;
 				}
+				if (!isStaff && tab.type === 'admin') {
+					return false;
+				}
 				return true;
 			});
-		}, [hasExpressionPackAccess, isDeveloperModeEnabled, settingsTabs]);
+		}, [hasExpressionPackAccess, isDeveloperModeEnabled, isStaff, settingsTabs]);
 		const resolveVisibleTab = useCallback(
 			(tabType?: UserSettingsTabType): UserSettingsTabType => {
 				if (tabType && visibleSettingsTabs.some((tab) => tab.type === tabType)) {

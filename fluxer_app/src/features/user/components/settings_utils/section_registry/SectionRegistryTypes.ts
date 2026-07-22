@@ -33,7 +33,8 @@ export type UserSettingsTabType =
 	| 'language'
 	| 'keybinds'
 	| 'expression_packs'
-	| 'linked_accounts';
+	| 'linked_accounts'
+	| 'admin';
 
 export interface SectionDefinition extends SettingsMetadata {
 	id: string;

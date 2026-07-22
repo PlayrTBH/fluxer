@@ -154,6 +154,10 @@ const DESIGN_SYSTEM_DESCRIPTOR = msg({
 	message: 'Design system',
 	comment: 'Developer settings tab showing UI component examples.',
 });
+const ADMIN_DESCRIPTOR = msg({
+	message: 'Admin',
+	comment: 'Staff-only settings tab for instance administration (user, server, and message management).',
+});
 
 export type AppearanceTabType =
 	| 'theme'
@@ -347,6 +351,12 @@ const ALL_TABS_DESCRIPTORS: Array<SettingsTabDescriptor> = [
 		category: 'developer',
 		label: DESIGN_SYSTEM_DESCRIPTOR,
 		icon: PaletteIcon,
+	},
+	{
+		type: 'admin',
+		category: 'developer',
+		label: ADMIN_DESCRIPTOR,
+		icon: ShieldIcon,
 	},
 ];
 export const USER_SETTINGS_LABEL_DESCRIPTOR = msg({

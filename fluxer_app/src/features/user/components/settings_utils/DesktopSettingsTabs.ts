@@ -2,6 +2,7 @@
 
 import {AccessibilityTab} from '@app/features/user/components/modals/tabs/AccessibilityTab';
 import AccountSecurityTab from '@app/features/user/components/modals/tabs/AccountSecurityTab';
+import AdminTab from '@app/features/user/components/modals/tabs/AdminTab';
 import AdvancedSettingsTab from '@app/features/user/components/modals/tabs/AdvancedSettingsTab';
 import {AppearanceTab} from '@app/features/user/components/modals/tabs/AppearanceTab';
 import ApplicationsTab from '@app/features/user/components/modals/tabs/applications_tab';
@@ -25,6 +26,7 @@ import type React from 'react';
 const DESKTOP_TAB_COMPONENTS: Partial<Record<UserSettingsTabType, React.ComponentType<Record<string, unknown>>>> = {
 	my_profile: MyProfileTab,
 	account_security: AccountSecurityTab,
+	admin: AdminTab,
 	plutonium: PlutoniumTab,
 	gift_inventory: GiftInventoryTab,
 	privacy_safety: PrivacySafetyTab,
