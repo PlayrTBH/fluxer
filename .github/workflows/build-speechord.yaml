@@ -137,6 +137,29 @@ jobs:
           ELECTRON_BUILDER_CACHE: C:\ebcache
         run: pnpm exec electron-builder --config electron-builder.config.cjs --win --x64
 
+      # --- Self-signed Authenticode test: the official Fluxer build signs every Windows binary;
+      # ours doesn't, and screen share greens only on ours. Sign the app binaries (exe + native
+      # .node/.dll) BEFORE Velopack packs them, so the binaries that actually run at runtime carry
+      # a signature — testing whether Windows was degrading the unsigned native capture/encode path.
+      # Ephemeral self-signed cert; the public .cer ships as a release asset for the user to trust
+      # (Trusted Root + Trusted Publishers) before installing this build.
+      - name: Self-sign Windows binaries (self-signed test cert)
+        working-directory: ${{ env.WORKDIR }}/fluxer_desktop
+        shell: pwsh
+        run: |
+          $cert = New-SelfSignedCertificate -Type CodeSigningCert -Subject "CN=Speechord Self-Sign" `
+            -CertStoreLocation Cert:\CurrentUser\My -KeyExportPolicy Exportable -KeyUsage DigitalSignature `
+            -NotAfter (Get-Date).AddYears(5)
+          Export-Certificate -Cert $cert -FilePath "dist-electron/SpeechordSelfSign.cer" | Out-Null
+          $files = Get-ChildItem "dist-electron/win-unpacked" -Recurse -Include *.exe,*.dll,*.node -ErrorAction SilentlyContinue
+          $ok = 0
+          foreach ($f in $files) {
+            $r = Set-AuthenticodeSignature -FilePath $f.FullName -Certificate $cert -HashAlgorithm SHA256 -ErrorAction SilentlyContinue
+            if ($r -and $r.Status -eq 'Valid') { $ok++ }
+          }
+          Write-Host "Self-signed $ok / $($files.Count) binaries in win-unpacked"
+          if ($ok -eq 0) { throw "signing produced 0 valid signatures" }
+
       # --- Velopack: turn the electron-builder win-unpacked app into an auto-updating
       # install. vpk pack emits a Velopack Setup.exe (what users install) plus the update
       # feed (releases.win.json + *-full.nupkg) the app polls at
@@ -222,4 +245,5 @@ jobs:
             ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/*.nupkg
             ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/releases.win.json
             ${{ github.workspace }}/fluxer_desktop/dist-electron/velopack-windows-x64/RELEASES
+            ${{ github.workspace }}/fluxer_desktop/dist-electron/SpeechordSelfSign.cer
             ${{ github.workspace }}/fluxer_desktop/dist-electron/*portable*.exe
