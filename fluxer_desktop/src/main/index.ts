@@ -21,7 +21,6 @@ import {
 	addLinuxHardwareVideoEncodeFeatures,
 	addLinuxScreenCapturePipeWireFeature,
 	addMacosPreSequoiaScreenCaptureDisabledFeatures,
-	addWindowsHardwareVideoEncodeFeatures,
 	addWindowsWebRtcWgcDisabledFeatures,
 	addWindowsWebRtcWgcEnabledFeatures,
 	appendConfiguredChromiumSwitches,
@@ -261,7 +260,9 @@ if (launchConfigurationError) {
 	const enabledChromiumFeatures = new Set<string>();
 	if (!disableHardwareAccelerationRequested) {
 		addLinuxHardwareVideoEncodeFeatures(enabledChromiumFeatures);
-		addWindowsHardwareVideoEncodeFeatures(enabledChromiumFeatures);
+		// Speechord: do NOT enable WebRtcAV1HWEncode on Windows. Hardware AV1 encode in Electron
+		// produces green/corrupt screen-share frames on AV1-capable GPUs where the browser (stock
+		// Chromium) is perfectly fine on the same hardware. Leave AV1 to the default software path.
 	}
 	addLinuxScreenCapturePipeWireFeature(enabledChromiumFeatures);
 	if (process.platform === 'darwin') {
@@ -279,8 +280,12 @@ if (launchConfigurationError) {
 	}
 	appendLinuxOzonePlatformHint();
 	if (process.platform === 'win32') {
-		app.commandLine.appendSwitch('enable-h264-mf');
-		app.commandLine.appendSwitch('enable-h264-mf-zero-copy');
+		// Speechord: do NOT force the Media Foundation hardware H.264 encoder. `enable-h264-mf` +
+		// `enable-h264-mf-zero-copy` hand the WGC/D3D11 capture texture straight into the MF encoder
+		// with no CPU copy, which on real-world Windows GPU/driver combos produces green frames for
+		// screen share and stalls the camera encoder to ~2 FPS. Electron disables the MF encoder by
+		// default; the browser (stock Chromium) works perfectly on the same hardware, so we let the
+		// desktop fall back to Chromium's default WebRTC encode path (software / VP8·VP9) instead.
 		app.setToastActivatorCLSID(WINDOWS_TOAST_ACTIVATOR_CLSID);
 		app.setAppUserModelId(WINDOWS_APP_USER_MODEL_ID);
 	}
