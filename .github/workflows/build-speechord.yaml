@@ -153,12 +153,16 @@ jobs:
           Export-Certificate -Cert $cert -FilePath "dist-electron/SpeechordSelfSign.cer" | Out-Null
           $files = Get-ChildItem "dist-electron/win-unpacked" -Recurse -Include *.exe,*.dll,*.node -ErrorAction SilentlyContinue
           $ok = 0
+          $lastStatus = "<none>"
           foreach ($f in $files) {
             $r = Set-AuthenticodeSignature -FilePath $f.FullName -Certificate $cert -HashAlgorithm SHA256 -ErrorAction SilentlyContinue
-            if ($r -and $r.Status -eq 'Valid') { $ok++ }
+            if ($r) { $lastStatus = $r.Status }
+            # A self-signed cert is untrusted on the CI runner, so Status is 'UnknownError' even
+            # though the file IS signed. What matters is that a signer certificate got attached.
+            if ($r -and $r.SignerCertificate) { $ok++ }
           }
-          Write-Host "Self-signed $ok / $($files.Count) binaries in win-unpacked"
-          if ($ok -eq 0) { throw "signing produced 0 valid signatures" }
+          Write-Host "Self-signed $ok / $($files.Count) binaries in win-unpacked (last status: $lastStatus)"
+          if ($ok -eq 0) { throw "signing produced 0 signatures (last status: $lastStatus)" }
 
       # --- Velopack: turn the electron-builder win-unpacked app into an auto-updating
       # install. vpk pack emits a Velopack Setup.exe (what users install) plus the update
